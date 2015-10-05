@@ -4,28 +4,14 @@ import imp
 import glob
 
 def _load_package(path, base):
-    pkgDir = os.path.abspath(os.path.join(path, base))
-    init = os.path.join(pkgDir, "__init__.py")
+    sys.path.append(path + "/" + base)
+    init = path + "/" + base + "/__init__.py"
     if not os.path.exists(init):
         return None, None
-    #
-    # mod = sys.modules[base] = imp.new_module(base)
-    # mod.__file__ = init
-    # mod.__path__ = [filename]
-    # #init file
-    # initfile = os.path.join(filename,initfile+ext)
-    # if os.path.exists(initfile):
-    #     with open(initfile,'U') as fp:
-    #         code = fp.read()
-    #     exec compile(code, initfile, 'exec') in mod.__dict__
-    file, pathname, description = imp.find_module(base, [path])
-    print file, pathname, description
-    pack = sys.modules.get(base, None)
-    if pack is None:
-        sys.modules[base] = pack = imp.load_module(base, file, pathname, description)
-        # pack.__path__ = [pkgDir]
-        print pack.sub
-    return base, pack
+    with open(init, 'rb') as fin:
+        source = imp.load_source(base, init, fin)
+        source.__path__ = path + "/" + base
+        return base, source
 
 def _load_module(path):
     code_file = os.path.basename(path)
