@@ -22,10 +22,9 @@ def _load_package(path, base):
     print file, pathname, description
     pack = sys.modules.get(base, None)
     if pack is None:
-        sys.modules[base] = pack = imp.load_module(base, None, '', description)
-        pack.__file__ = init
-        pack.__path__ = [pkgDir]
-        # print pack.sub
+        sys.modules[base] = pack = imp.load_module(base, file, pathname, description)
+        # pack.__path__ = [pkgDir]
+        print pack.sub
     return base, pack
 
 def _load_module(path):
