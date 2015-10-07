@@ -1,31 +1,18 @@
 import sys
 import os.path
 import imp
-import glob
 
-def _load_package(path, base):
-    pkgDir = os.path.abspath(os.path.join(path, base))
-    init = os.path.join(pkgDir, "__init__.py")
-    if not os.path.exists(init):
-        return None, None
-    #
-    # mod = sys.modules[base] = imp.new_module(base)
-    # mod.__file__ = init
-    # mod.__path__ = [filename]
-    # #init file
-    # initfile = os.path.join(filename,initfile+ext)
-    # if os.path.exists(initfile):
-    #     with open(initfile,'U') as fp:
-    #         code = fp.read()
-    #     exec compile(code, initfile, 'exec') in mod.__dict__
-    file, pathname, description = imp.find_module(base, [path])
+def _load_package(root, name):
+    file, pathname, description = imp.find_module(name, [root])
     print file, pathname, description
-    pack = sys.modules.get(base, None)
+    pack = sys.modules.get(name, None)
     if pack is None:
-        sys.modules[base] = pack = imp.load_module(base, file, pathname, description)
+        pack = imp.load_module(name, file, pathname, description)
         # pack.__path__ = [pkgDir]
         print pack.sub
-    return base, pack
+    else:
+        print 'In cache', pack
+    return name, pack
 
 def _load_module(path):
     code_file = os.path.basename(path)
@@ -33,16 +20,19 @@ def _load_module(path):
     with open(path, 'rb') as fin:
         return base, imp.load_source(base, path, fin)
 
-def load_folder(dir):
-    sys.path.append(dir)
+def load_folder(root):
+    # sys.path.append(root)
     mods = {}
-    for p in glob.glob(dir + "/*/"):
-        base = p.replace("\\", "").replace("/", "")
-        base = base.replace(dir.replace("\\", "").replace("/", ""), "")
-        hash, pack = _load_package(dir, base)
-        if hash: mods[hash] = pack
-    for m in glob.glob(dir + "/*.py"): ##: /*/*.py
-        hash, mod = _load_module(m)
+    paths = [(_, os.path.join(root, _)) for _ in os.listdir(root)]
+    dirs = filter(lambda _: os.path.isdir(_[1]), paths)
+    pys = filter(lambda _: _[0][-3:] == '.py', paths)
+    for path, _abspath in dirs: # ['mod.py', 'mod.pyc', 'package', 'package2']
+        init = os.path.join(_abspath, "__init__.py")
+        if not os.path.exists(init): continue
+        hash, mod = _load_package(root, name=path)
+        mods[hash] = mod
+    for path, _abspath in pys: # ['mod.py', 'mod.pyc', 'package', 'package2']
+        hash, mod = _load_module(_abspath)
         mods[hash] = mod
     return mods
 
@@ -51,21 +41,21 @@ print('Python %s on %s' % (sys.version, sys.platform))
 
 root_ = r'C:\Dropbox\eclipse_workspaces\python\sandbox\root'
 
-def depyc(root, _indent=''): # deletes .pyc which will end up being imported
+def depyc(root, rmpyc, _indent=''): # deletes .pyc which will end up being imported
     if not _indent: print '\nListing', root
     for p in os.listdir(root):
         name = _indent + p
         abspath = os.path.join(root, p)
         if os.path.isdir(abspath):
             print name + ':'
-            depyc(abspath, _indent=_indent + '  ')
+            depyc(abspath, rmpyc, _indent=_indent + '  ')
         else:
-            name_ = name[-4:]
-            if name_ == '.pyc':
+            if rmpyc and name[-4:] == '.pyc':
                 os.remove(abspath)
                 continue
             print name
     if not _indent: print
 
-depyc(root_)
+depyc(root_, True) # False will end up importing the pyc files !
 load_folder(root_)
+# load_folder(root_)
