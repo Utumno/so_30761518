@@ -1,6 +1,10 @@
 print(__file__ + u' imported!')
 
-sub = 33
+init_sub = 33
+
+from package import sub as _sub
+
+print _sub
 
 print '__name__', '->', __name__
 print '__package__', '->', __package__
